@@ -2,7 +2,7 @@ from copy import deepcopy
 from dataclasses import dataclass
 from typing import Union
 import unittest
-from xuriprafunction.domain.models.base_model import BaseModel
+from rutyva import BaseModel
 
 a_int = 5
 a_float = 5.454234
