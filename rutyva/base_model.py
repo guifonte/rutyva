@@ -3,6 +3,7 @@ from dataclasses import dataclass, asdict
 from .validation import validate_any
 from .from_dict_generator import gen_from_any
 
+
 @dataclass
 class BaseModel:
   def __post_init__(self):
@@ -33,18 +34,29 @@ class BaseModel:
     if not raise_error: return True
 
   @classmethod
-  def from_dict(cls, d: dict):
+  def from_dict(cls, d: dict, raise_if_extra_attribute=False):
     if not isinstance(d, dict): raise TypeError('Input is not a dict!')
     d_copy = deepcopy(d)
+    d_return = dict()
 
     dc_fields = cls.__dataclass_fields__  # type: ignore
-    for key in d_copy:
+    for key in d:
       if key not in dc_fields:
-        raise TypeError(f'{key} is not an attribute of {cls.__name__}')
-
-      d_copy[key] = gen_from_any(d_copy[key], dc_fields[key].type)
+        if raise_if_extra_attribute:
+          raise TypeError(f'{key} is not an attribute of {cls.__name__}')
+      else:
+        d_return[key] = gen_from_any(d_copy[key], dc_fields[key].type)
       
-    return cls(**d_copy) # type: ignore
+    # try to create missing attributes (maybe they have default values)
+    # for key in dc_fields:
+    #   if key not in d_return:
+    #     try:
+    #       key_class = dc_fields[key].type
+    #       d_return[key] = key_class()
+    #     except:
+    #       raise TypeError(f'{cls.__name__} attribute {key} is missing')
+
+    return cls(**d_return) # type: ignore
 
     #list -> get_list=None, get_args=()
     #list[Any] -> get_origin=list, get_args=(Any,)
