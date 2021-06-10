@@ -139,13 +139,20 @@ class TestBMSimpleAttFromDict(unittest.TestCase):
     with self.assertRaises(TypeError):
       test = BMSimpleAtt.from_dict(self.test_simple_att_params)
 
-  def test_extra_params(self):
+  def test_extra_params_raises(self):
     '''
     Should raise TypeError if created from dict with extra parameters
     '''
     self.test_simple_att_params['extra_tuple'] = a_tuple_int_str_bool
     with self.assertRaises(TypeError):
-      test = BMSimpleAtt.from_dict(self.test_simple_att_params)
+      test = BMSimpleAtt.from_dict(self.test_simple_att_params,raise_if_extra_attribute=True)
+      
+  def test_extra_params(self):
+    '''
+    Should raise TypeError if created from dict with extra parameters
+    '''
+    self.test_simple_att_params['extra_tuple'] = a_tuple_int_str_bool
+    test = BMSimpleAtt.from_dict(self.test_simple_att_params)
       
   def test_float_is_int(self):
     '''
