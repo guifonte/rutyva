@@ -1,6 +1,7 @@
 from copy import deepcopy
 from dataclasses import dataclass, asdict
 from typing import Any, Literal, Union, get_args, get_origin
+from .validation import validate_any
 
 @dataclass
 class BaseModel:
@@ -16,82 +17,20 @@ class BaseModel:
   def to_dict(self):
     return asdict(self)
 
-  def validate_attributes(self):
+  def validate_attributes(self, raise_error=True, return_error_message=False):
     dc_fields = self.__dataclass_fields__
     for dc_field_key in dc_fields:
       ann = dc_fields[dc_field_key].type
       att = self.__getattribute__(dc_field_key)
-      self._validate_any(dc_field_key, att, ann)
-
-  def _validate_any(self, att_key, att, ann):
-    origin = get_origin(ann)
-    if origin is not None:
-      self._validate_with_origin(origin, att_key, att, get_args(ann))
-    else:
-      ann_to_test = ann if ann != float else (int, float)
-
-      if not isinstance(att, ann_to_test):
-        raise TypeError(self._format_type_error(att_key, att, ann))
-  
-  def _validate_with_origin(self, origin, att_key, att, args):
-      if origin == Union:
-        return self._validate_union(att_key, att, args)
-      if origin == Literal:
-        return self._validate_literal(att_key, att, args)
-      if origin == list:
-        return self._validate_list(att_key, att, args)
-      if origin == tuple:
-        return self._validate_tuple(att_key, att, args)
-      if origin == dict:
-        return self._validate_dict(att_key, att, args)
-
-      print('VALIDATION WITH ORIGIN NOT IMPLEMENTED:', att_key, att, args, origin)
-
-  def _validate_dict(self, att_key, att, anns):
-    if not isinstance(att, dict):
-      raise TypeError(self._format_type_error(att_key, att, dict))
-
-    key_class = anns[0]
-    val_class = anns[1]
-    for key in att:
-      self._validate_any(att_key, key, key_class)
-      self._validate_any(att_key, att[key], val_class)
-
-  def _validate_literal(self, att_key, att, options):
-    if att not in options:
-      raise TypeError(f'{self.__class__.__name__} attribute {att_key} value {att} is not one of the valid options: {options}')
-
-  def _validate_union(self, att_key, att, anns):
-    for ann in anns:
       try:
-        self._validate_any(att_key, att, ann)
-        return
-      except:
-        pass
+        validate_any(dc_field_key, att, ann)
+      except Exception as e:
+        error_message = f'({self.__class__.__name__}) attribute ' + e.args[0]
+        if raise_error: raise TypeError(error_message)
+        if return_error_message: return error_message
+        return False
     
-    raise TypeError(self._format_type_error(att_key, att, anns))
-  
-  def _validate_tuple(self, att_key, att, ann):
-    if not isinstance(att, tuple):
-      raise TypeError(self._format_type_error(att_key, att, tuple))
-    
-    att_len = len(att)
-    ann_len = len(ann)
-    if att_len != ann_len:
-      raise TypeError(f'{self.__class__.__name__} tuple {att_key} ({att_key}) has length of {att_len} and should be {ann_len}')
-
-    for i in range(ann_len):
-      self._validate_any(att_key, att[i], ann[i])
-
-  def _validate_list(self, att_key, att_list, ann):
-    if not isinstance(att_list, list):
-      raise TypeError(self._format_type_error(att_key, att_list, list))
-    
-    for item in att_list:
-      self._validate_any(att_key, item, ann)
-
-  def _format_type_error(self, att_key, att, ann) -> str:
-    return f'{self.__class__.__name__} arguments types are not valid: "{att_key}" ({att}) is "{type(att).__name__}" and should be "{ann.__name__}"'
+    if not raise_error: return True
 
   @classmethod
   def from_dict(cls, d: dict):
