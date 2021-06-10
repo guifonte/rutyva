@@ -1,6 +1,5 @@
 from typing import get_origin, get_args, Union, Literal, Any
 from copy import deepcopy
-from .base_model import BaseModel
 
 
 def from_dict(cls, d: dict):
@@ -35,17 +34,18 @@ def gen_from_any(d_val, ann):
   else:
     if isinstance(d_val, ann):
       return d_val
-    if issubclass(ann, BaseModel):
-      return ann.from_dict(d_val) 
     if ann == Any:
       return d_val
+
+    # check if has from_dict class method
+    from_dict_method = getattr(ann, 'from_dict', None)
+    if from_dict_method is not None:
+      return from_dict_method(d_val)
     
     try:
       return ann(**d_val)
     except:
       return d_val
-
-    # print('GENERATION NOT IMPLEMENTED:', ann, d_val)
 
 def gen_from_list(d_val, ann):
   if not isinstance(d_val, list): return d_val
