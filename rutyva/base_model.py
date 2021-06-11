@@ -21,15 +21,16 @@ class BaseModel:
   def validate_attributes(self, raise_error=True, return_error_message=False):
     dc_fields = self.__dataclass_fields__
     for dc_field_key in dc_fields:
-      ann = dc_fields[dc_field_key].type
-      att = self.__getattribute__(dc_field_key)
-      try:
-        validate_any(dc_field_key, att, ann)
-      except Exception as e:
-        error_message = f'({self.__class__.__name__}) attribute ' + e.args[0]
-        if raise_error: raise TypeError(error_message)
-        if return_error_message: return error_message
-        return False
+      if dc_fields[dc_field_key].init:
+        ann = dc_fields[dc_field_key].type
+        att = self.__getattribute__(dc_field_key)
+        try:
+          validate_any(dc_field_key, att, ann)
+        except Exception as e:
+          error_message = f'({self.__class__.__name__}) attribute ' + e.args[0]
+          if raise_error: raise TypeError(error_message)
+          if return_error_message: return error_message
+          return False
     
     if not raise_error: return True
 
