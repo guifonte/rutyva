@@ -1,5 +1,5 @@
 from copy import deepcopy 
-from dataclasses import dataclass
+from dataclasses import dataclass, field
 from typing import Union
 import unittest
 from rutyva import BaseModel
@@ -530,6 +530,18 @@ class TestBMWithOriginTypes(unittest.TestCase):
 
     test3 = BMClassUnion(a_union=BMSimpleAtt(**test_simple_att_params)) 
 
+  def test_init_false(self):
+
+    @dataclass
+    class InitFalse(BaseModel):
+      a: int
+      b: int = field(init=False)
+      def __pre_validation__(self):
+        self.b = self.a + 1
+
+    a_obj = InitFalse(1)
+    self.assertFalse(a_obj.__dataclass_fields__['b'].init)
+    self.assertFalse(InitFalse.__dataclass_fields__['b'].init)
 
 ### TEST WITH ORIGIN
 # OK Union[X, Y]

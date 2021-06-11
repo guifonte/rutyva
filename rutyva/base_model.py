@@ -45,7 +45,8 @@ class BaseModel:
         if raise_if_extra_attribute:
           raise TypeError(f'{key} is not an attribute of {cls.__name__}')
       else:
-        d_return[key] = gen_from_any(d_copy[key], dc_fields[key].type)
+        if dc_fields[key].init:
+          d_return[key] = gen_from_any(d_copy[key], dc_fields[key].type)
       
     # try to create missing attributes (maybe they have default values)
     # for key in dc_fields:
