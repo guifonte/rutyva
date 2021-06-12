@@ -459,7 +459,7 @@ class TestBMBMClassAtt(unittest.TestCase):
     '''
     self.bm_simple_att_obj['a_list'] = a_tuple_int_str_bool
     self.bm_bmclass_att_params['a_bm_simple_att_obj'] = self.bm_simple_att_obj
-    with self.assertRaises(TypeError):
+    with self.assertRaises(TypeError) as cm:
       test = BMBMClassAtt.from_dict(self.bm_bmclass_att_params)
 
   def test_bmclass_dict_from_dict(self):
