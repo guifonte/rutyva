@@ -1,92 +1,127 @@
 from typing import Any, Literal, Union, get_args, get_origin
 
-
-def validate_any(att_key, att, ann):
+def validate_var(var: Any, ann: Any) -> None:
+  '''
+  Validate if the variable type is the expected by the annotation
+  '''
   origin = get_origin(ann)
   if origin is not None:
-    validate_with_origin(origin, att_key, att, get_args(ann))
-  else:
-    ann_to_test = ann if ann != float else (int, float)
+    return validate_with_origin(origin, var, get_args(ann))
 
-    if ann_to_test == Any: return
+  return validate_without_origin(var, ann)
 
-    if not isinstance(att, ann_to_test):
-      raise TypeError(format_type_error(att_key, att, ann))
+def validate_without_origin(var: Any, ann: Any) -> None:
+  ann_to_test = ann if ann != float else (int, float)
 
-def validate_with_origin(origin, att_key, att, args):
+  if ann_to_test == Any: return
+
+  if not isinstance(var, ann_to_test):
+    raise TypeError(format_type_error(var, ann))
+  
+def validate_with_origin(origin: Any, var: Any, args: tuple) -> None:
     if origin == Union:
-      return validate_union(att_key, att, args)
+      return validate_union(var, args)
     if origin == Literal:
-      return validate_literal(att_key, att, args)
+      return validate_literal(var, args)
     if origin == list:
-      return validate_list(att_key, att, args[0])
+      return validate_list(var, args[0])
     if origin == tuple:
-      return validate_tuple(att_key, att, args)
+      return validate_tuple(var, args)
     if origin == dict:
-      return validate_dict(att_key, att, args)
+      return validate_dict(var, args)
 
-    print('VALIDATION WITH ORIGIN NOT IMPLEMENTED:', att_key, att, args, origin)
+    print('VALIDATION WITH ORIGIN NOT IMPLEMENTED:', var, args, origin)
 
-def validate_dict(att_key, att, anns):
-  if not isinstance(att, dict):
-    raise TypeError(format_type_error(att_key, att, dict))
+def validate_dict(var: Any, anns: tuple) -> None:
+  if not isinstance(var, dict):
+    raise TypeError(format_type_error(var, dict))
 
   key_class = anns[0]
   val_class = anns[1]
-  for key in att:
+  for key in var:
     try:
-      validate_any('', key, key_class)
+      validate_var(key, key_class)
     except Exception as e:
-      raise TypeError(f'({att_key}) dict key ' + e.args[0])
+      raise TypeError(f'dict key ' + e.args[0])
 
     try:
-      validate_any('', att[key], val_class)
+      validate_var(var[key], val_class)
     except Exception as e:
-      raise TypeError(f'({att_key}) dict key ({key}) value ' + e.args[0])
+      raise TypeError(f'dict key ({key}) -> value ' + e.args[0])
 
-def validate_literal(att_key, att, options):
-  if att not in options:
-    raise TypeError(f'({att_key}) of value ({att}) is not one of the valid options: ({options})')
+def validate_literal(var: Any, options: tuple) -> None:
+  if var not in options:
+    raise TypeError(f'({var}) is not one of the valid options: ({options})')
 
-def validate_union(att_key, att, anns):
+def validate_union(var: Any, anns: tuple) -> None:
   for ann in anns:
     try:
-      validate_any(att_key, att, ann)
+      validate_var(var, ann)
       return
     except:
       pass
   
-  error_message = f'({att_key}) of value ({att}) expected to have one of the types ({anns}) but have type ({type(att).__name__})'
+  anns_str = format_ann_args(anns, 'union')
+  error_message = f'({var}) is ({type(var).__name__}), but should be ({anns_str})'
   raise TypeError(error_message)
 
-def validate_tuple(att_key, att, ann):
-  if not isinstance(att, tuple):
-    raise TypeError(format_type_error(att_key, att, tuple))
+def validate_tuple(var: Any, anns: tuple) -> None:
+  if not isinstance(var, tuple):
+    raise TypeError(format_type_error(var, tuple))
   
-  if ann == Any: return
+  var_len = len(var)
+  anns_len = len(anns)
+  if var_len != anns_len:
+    raise TypeError(f'tuple with length {var_len}, should have length {anns_len}')
 
-  att_len = len(att)
-  ann_len = len(ann)
-  if att_len != ann_len:
-    raise TypeError(f'{att_key} ({att}) tuple has length of {att_len} and should be {ann_len}')
-
-  for i in range(ann_len):
+  for i in range(anns_len):
     try:
-      validate_any(i, att[i], ann[i])
+      validate_var(var[i], anns[i])
     except Exception as e:
-      raise(TypeError(f'({att_key}) tuple in position ' + e.args[0]))
+      raise(TypeError(f'error in position ({i}): ' + e.args[0]))
 
-def validate_list(att_key, att_list, list_item_type):
-  if not isinstance(att_list, list):
-    raise TypeError(format_type_error(att_key, att_list, list))
+def validate_list(var: Any, ann: Any) -> None:
+  if not isinstance(var, list):
+    raise TypeError(format_type_error(var, list))
   
-  for i in range(len(att_list)):
+  for i in range(len(var)):
     try:
-      validate_any(i, att_list[i], list_item_type)
+      validate_var(var[i], ann)
     except Exception as e:
-      raise TypeError(f'({att_key}) list in position '+e.args[0])
+      raise TypeError(f'error in position ({i}): '+e.args[0])
 
-def format_type_error(att_key, att, ann) -> str:
-  if att_key == '':
-    return f'({att}) expected to have type ({ann.__name__}) but have type ({type(att).__name__})'
-  return f'({att_key}) of value ({att}) expected to have type ({ann.__name__}) but have type ({type(att).__name__})'
+def format_type_error(var, ann) -> str:
+  return f'({var}) is ({type(var).__name__}), but should be ({ann.__name__})'
+
+def format_ann_args(ann_args, origin_type: str) -> str:
+  if not isinstance(ann_args, tuple):
+    return ann_args.__name__
+
+  anns_str = ''
+  count_anns = len(ann_args)
+  for i in range(count_anns):
+    ann_arg = ann_args[i]
+    origin = get_origin(ann_arg)
+    anns_str_prefix = ann_arg.__name__
+
+    if origin is not None:
+      if origin == tuple:
+        anns_str_prefix += '[' + format_ann_args(get_args(ann_arg), 'tuple')+ ']'
+      if origin == list:
+        anns_str_prefix += '[' + get_args(ann_arg)[0].__name__ + ']'
+      if origin == dict:
+        anns_str_prefix += '[' + format_ann_args(get_args(ann_arg), 'dict')+ ']'
+      # if origin == Union:
+      #   anns_str_prefix = format_ann_args(get_args(ann_arg), 'union')
+
+
+    if i == count_anns-1:
+      anns_str += anns_str_prefix
+    else:
+      if origin_type == 'union':
+        anns_str += anns_str_prefix + ' | '
+      # elif origin_type == 'tuple':
+      else:
+        anns_str += anns_str_prefix + ', '
+
+  return anns_str

@@ -1,6 +1,6 @@
 from copy import deepcopy
 from dataclasses import dataclass, asdict
-from .validation import validate_any
+from .validation import validate_var
 from .from_dict_generator import gen_from_any
 
 
@@ -25,9 +25,9 @@ class BaseModel:
         ann = dc_fields[dc_field_key].type
         att = self.__getattribute__(dc_field_key)
         try:
-          validate_any(dc_field_key, att, ann)
+          validate_var(att, ann)
         except Exception as e:
-          error_message = f'({self.__class__.__name__}) attribute ' + e.args[0]
+          error_message = f'({self.__class__.__name__}) -> attribute ({dc_field_key}) -> ' + e.args[0]
           if raise_error: raise TypeError(error_message)
           if return_error_message: return error_message
           return False
