@@ -1,6 +1,6 @@
 from copy import deepcopy 
 from dataclasses import dataclass, field
-from typing import Union
+from typing import Optional, Union
 import unittest
 from rutyva import BaseModel
 
@@ -530,6 +530,32 @@ class TestBMWithOriginTypes(unittest.TestCase):
 
     test3 = BMClassUnion(a_union=BMSimpleAtt(**test_simple_att_params)) 
 
+  def test_union_subclasses_wrong_type(self):
+    '''
+    Should not raise TypeError if parameter type is within the Union
+    '''
+    @dataclass
+    class BMClassUnion(BaseModel):
+      a_union: Union[list, BaseModel] 
+
+    with self.assertRaises(TypeError) as cm:
+      test3 = BMClassUnion(a_union='lorem')
+     
+    print(cm.exception.args[0])
+
+  def test_union_with_origin(self):
+    '''
+    Should not raise TypeError if parameter type is within the Union
+    '''
+    @dataclass
+    class BMClassUnion(BaseModel):
+      # a_union: Union[list[bool], tuple[str, int, dict[str, int]], float] 
+      a_union: Union[list[bool], tuple[str, int, dict[str, int, Optional[BMSimpleAtt]]], float] 
+
+    with self.assertRaises(TypeError) as cm:
+      test3 = BMClassUnion(a_union='lorem')
+     
+    print(cm.exception.args[0])
   def test_init_false(self):
 
     @dataclass
